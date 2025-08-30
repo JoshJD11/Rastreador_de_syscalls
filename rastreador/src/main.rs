@@ -29,6 +29,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let binary = CString::new(args[2].to_string()).unwrap();
     let syscall_names = syscall_map();
+    let mut syscalls_count: HashMap<u64, u64> = HashMap::new();
     
     match unsafe { fork() } {
         Ok(ForkResult::Child) => {
@@ -53,6 +54,8 @@ fn main() {
                     WaitStatus::Stopped(_, _) => {
                        
                         let regs = ptrace::getregs(child).expect("getregs falló");
+                        let value = syscalls_count.entry(regs.orig_rax).or_insert(0);
+                        *value += 1;
 
                         println!("Syscall: {}", syscall_names.get(&regs.orig_rax).unwrap_or(&"desconocido".to_string()));
                         println!("NR: {}", regs.orig_rax);
@@ -62,6 +65,7 @@ fn main() {
                         println!("r10: {:#x}", regs.r10);
                         println!("r8: {:#x}", regs.r8);
                         println!("r9: {:#x}", regs.r9);
+                        println!("Total calls: {}", *value);
 
                         if args[1] == "-V" { let _ = io::stdin().read_line(&mut String::new()); }
                         ptrace::syscall(child, None).expect("ptrace syscall falló");
@@ -69,6 +73,12 @@ fn main() {
                     }
                     _ => {}
                 }
+            }
+            for key in syscalls_count.keys() {
+                println!("Syscall: {}", syscall_names.get(key).unwrap());
+                println!("NR: {}", key);
+                println!("Total Calls: {}", syscalls_count.get(key).unwrap());
+                println!("");
             }
         }
         Err(e) => panic!("fork falló: {}", e)

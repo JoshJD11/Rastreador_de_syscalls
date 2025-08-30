@@ -6,6 +6,7 @@ use std::io::{self, BufRead};
 use::std::collections::HashMap;
 use:: std::fs::File;
 use std::env;
+use std::process;
 
 
 fn syscall_map() -> HashMap<u64, String> {
@@ -27,6 +28,11 @@ fn syscall_map() -> HashMap<u64, String> {
 fn main() {
 
     let args: Vec<String> = env::args().collect();
+    if args.len() < 2 || (args[1] != "-v" && args[1] != "-V") {
+        println!("Comando mal escrito");
+        process::exit(1);
+    }
+
     let binary = CString::new(args[2].to_string()).unwrap();
     let syscall_names = syscall_map();
     let mut syscalls_count: HashMap<u64, u64> = HashMap::new();
